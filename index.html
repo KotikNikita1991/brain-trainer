@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Нейрон</title>
+  <meta name="description" content="Тренажёр для мозга: память, внимание, логика, эрудиция">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Нейрон">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <script>
+    (function () {
+      try {
+        var s = JSON.parse(localStorage.getItem('bt_settings') || '{}');
+        if (s.theme === 'light' || s.theme === 'dark') document.documentElement.setAttribute('data-theme', s.theme);
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <div id="app"></div>
+  <noscript>Для работы приложения включите JavaScript.</noscript>
+
+  <script src="js/config.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/sync.js"></script>
+  <script src="js/data/sets.js"></script>
+  <script src="js/data/sets2.js"></script>
+  <script src="js/data/quiz.js"></script>
+  <script src="js/data/quiz2.js"></script>
+  <script src="js/data/words.js"></script>
+  <script src="js/games/memory.js"></script>
+  <script src="js/games/attention.js"></script>
+  <script src="js/games/logic.js"></script>
+  <script src="js/games/words.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
