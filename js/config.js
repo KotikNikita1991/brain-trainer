@@ -4,12 +4,12 @@ window.BT_CONFIG = {
 
   // URL веб-приложения Google Apps Script (Deploy → Web app → ссылка на /exec).
   // Пока пусто — приложение работает без синхронизации (данные только на этом телефоне).
-  API_URL: '',
+  API_URL: 'https://script.google.com/macros/s/AKfycbz1WIUtGUWqmDIo4GdC_Hxga6JysTW_VBP-B9tvQm1vhde1o9qkY99PsFkwjza6dmTHVg/exec',
 
   // Два профиля по умолчанию. Имена/эмодзи/цвета меняются в самом приложении
   // и синхронизируются между телефонами.
   PROFILES: [
-    { id: 'p1', name: 'Игрок 1', emoji: '🦊', color: '#5E5CE6' },
-    { id: 'p2', name: 'Игрок 2', emoji: '🦋', color: '#FF375F' },
+    { id: 'p1', name: 'Никита', emoji: '🦊', color: '#5E5CE6' },
+    { id: 'p2', name: 'Лерочка', emoji: '🦋', color: '#FF375F' },
   ],
 };
