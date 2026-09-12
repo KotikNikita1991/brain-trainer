@@ -11,5 +11,6 @@ window.BT_CONFIG = {
   PROFILES: [
     { id: 'p1', name: 'Никита', emoji: '🦊', color: '#5E5CE6' },
     { id: 'p2', name: 'Лерочка', emoji: '🦋', color: '#FF375F' },
+    { id: 'p3', name: 'Федос', emoji: '🐒', color: '#25c57a' },
   ],
 };
