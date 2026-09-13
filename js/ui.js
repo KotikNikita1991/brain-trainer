@@ -39,6 +39,22 @@
     anagram: '<rect x="2" y="7" width="6" height="9" rx="1.5"/><rect x="9" y="7" width="6" height="9" rx="1.5"/><rect x="16" y="7" width="6" height="9" rx="1.5"/><path d="M5 19.5h14"/>',
     spell: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
     stress: '<path d="M6 21l6-13 6 13"/><path d="M8.3 16h7.4"/><path d="M13.5 2.5l-2.5 3"/>',
+    digits: '<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7 10l1.5-1v6M11 9.5a1.5 1.5 0 0 1 3 0c0 1.5-3 2.5-3 5h3M17 9h2l-1.2 2.2a1.6 1.6 0 1 1-1.3 2.6"/>',
+    wordlist: '<path d="M8 6h12M8 12h12M8 18h8"/><path d="M4 6h.01M4 12h.01M4 18h.01" stroke-width="3"/>',
+    nback: '<rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/><path d="M13 7h5a3 3 0 0 1 3 3M11 17H6a3 3 0 0 1-3-3"/>',
+    changes: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+    faces: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14.8c1.6.9 2.6 2.6 3 5.2"/>',
+    truefalse: '<path d="M3.5 12.5l3 3 5-6"/><path d="M14.5 9l6 6M20.5 9l-6 6"/>',
+    chrono: '<path d="M12 3v18"/><circle cx="12" cy="6" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="18" r="2"/><path d="M14.5 6H20M4 12h5.5M14.5 18H19"/>',
+    odd: '<circle cx="7" cy="7" r="3"/><circle cx="17" cy="7" r="3"/><circle cx="7" cy="17" r="3"/><rect x="14" y="14" width="6" height="6" rx="1"/>',
+    sudoku: '<rect x="3" y="3" width="18" height="18" rx="2.5"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/><path d="M5.6 6h.8M11.6 12h.8M17.6 18h.8" stroke-width="2.6"/>',
+    crossword: '<path d="M3 9h12v6H3zM9 3h6v18H9z"/><path d="M15 9h6v6h-6"/>',
+    wordcross: '<circle cx="12" cy="12" r="9"/><path d="M12 6.5v.01M7 14.5v.01M17 14.5v.01M9 9.5l6 5M15 9.5l-6 5" stroke-width="2.4"/>',
+    userplus: '<circle cx="10" cy="8" r="4"/><path d="M3 21c1.2-4 4-6 7-6 1.3 0 2.5.3 3.5 1M18 14v6M15 17h6"/>',
+    hint: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.8.6 1.1 1.4 1.1 2.2h5c0-.8.3-1.6 1.1-2.2A6 6 0 0 0 12 3z"/>',
+    pencil: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
+    eraser: '<path d="M16 4l5 5-9.5 9.5H7L3 14.5z"/><path d="M9.5 8.5l6 6M7 18.5h13"/>',
+    undo: '<path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
   };
   BT.icon = (name, cls) =>
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"' +
@@ -246,6 +262,22 @@
       '<text x="' + pl + '" y="' + (H - 6) + '">' + lab(pts[0].ts) + '</text>' +
       '<text x="' + (W - pr) + '" y="' + (H - 6) + '" text-anchor="end">' + lab(pts[pts.length - 1].ts) + '</text>' +
       '</svg>';
+  };
+
+  // ---------- Разбор ответов (после викторин и блицев) ----------
+  // items: [{ q, your, right, ok, note }]
+  BT.reviewSheet = function (items, title) {
+    const wrong = items.filter((x) => !x.ok).length;
+    const list = h('div', { class: 'review' }, items.map((x) =>
+      h('div', { class: 'rv' + (x.ok ? ' ok' : ' bad') },
+        h('div', { class: 'rv-q' }, h('span', { class: 'rv-mark', text: x.ok ? '✓' : '✗' }), h('span', { text: x.q })),
+        !x.ok && x.your != null ? h('div', { class: 'rv-your', text: 'Ваш ответ: ' + x.your }) : null,
+        h('div', { class: 'rv-right', text: (x.ok ? 'Ответ: ' : 'Правильно: ') + x.right }),
+        x.note ? h('div', { class: 'rv-note', text: x.note }) : null)));
+    BT.sheet(h('div', null,
+      h('h2', { class: 'sheet-title', text: title || 'Разбор ответов' }),
+      h('p', { class: 'sheet-sub', text: wrong ? 'Ошибок: ' + wrong + ' из ' + items.length : 'Все ответы верные — отлично!' }),
+      list));
   };
 
   // ---------- Спарклайн ----------

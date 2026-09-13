@@ -71,7 +71,7 @@
       'Три верных подряд — примеры сложнее, ошибка — проще.',
       '60 секунд. Чем сложнее пример, тем больше очков.',
     ],
-    ref: 1200, startLevel: 1,
+    ref: 1000, startLevel: 1, maxLevel: 10,
     run(ctx) {
       const h = ctx.h;
       let d = BT.clamp(ctx.level, 1, 10), maxD = d, streak = 0, score = 0, right = 0, wrong = 0, skipped = 0;
@@ -197,7 +197,7 @@
       'Нажмите на то, что больше. Считайте в уме — и быстро.',
       '45 секунд. Ошибка отнимает 2 секунды, серия верных даёт бонус.',
     ],
-    ref: 900, startLevel: 1,
+    ref: 750, startLevel: 1, maxLevel: 8,
     run(ctx) {
       const h = ctx.h;
       const lvl = BT.clamp(ctx.level, 1, 8);
@@ -300,7 +300,7 @@
       'Выберите число, которое идёт следующим.',
       '12 вопросов, на каждый — 20 секунд. Быстрый ответ даёт больше очков.',
     ],
-    ref: 1100, startLevel: 1,
+    ref: 900, startLevel: 1, maxLevel: 6,
     run(ctx) {
       const h = ctx.h;
       const lvl = BT.clamp(ctx.level, 1, 6);

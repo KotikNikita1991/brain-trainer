@@ -6,18 +6,35 @@
   const CFG = window.BT_CONFIG;
   const K = { profiles: 'bt_profiles', results: 'bt_results', pending: 'bt_pending', cursor: 'bt_cursor' };
 
-  // ---------- Профили ----------
+  // ---------- Ранги (шкала 0–100) ----------
+  BT.RANKS = [
+    { min: 0, name: 'Новичок' },
+    { min: 20, name: 'Любитель' },
+    { min: 40, name: 'Опытный' },
+    { min: 60, name: 'Эксперт' },
+    { min: 80, name: 'Мастер' },
+    { min: 95, name: 'Гений' },
+  ];
+  BT.rank = function (v) {
+    if (v == null) return null;
+    let i = 0;
+    while (i + 1 < BT.RANKS.length && v >= BT.RANKS[i + 1].min) i++;
+    return { name: BT.RANKS[i].name, min: BT.RANKS[i].min, next: BT.RANKS[i + 1] || null };
+  };
+
+  // ---------- Профили: из config.js + добавленные в приложении (синхронизируются) ----------
   let profiles = BT.ls.get(K.profiles, []);
   if (!Array.isArray(profiles)) profiles = [];
   CFG.PROFILES.forEach((def) => {
-    if (!profiles.find((p) => p.id === def.id)) profiles.push(Object.assign({ updated: 0 }, def));
+    const p = profiles.find((x) => x.id === def.id);
+    if (!p) profiles.push(Object.assign({ updated: 0 }, def));
+    else if (!p.updated) Object.assign(p, def, { updated: 0 });
   });
-  profiles = CFG.PROFILES.map((def) => profiles.find((p) => p.id === def.id));
   const saveProfiles = () => BT.ls.set(K.profiles, profiles);
+  saveProfiles();
 
   // ---------- Результаты ----------
-  // Формат: { id, p: профиль, g: игра, s: очки, l: уровень, nl: след. уровень, a: точность 0..1,
-  //           t: длительность мс, ts: время, d: детали }
+  // { id, p: профиль, g: игра, s: очки, l: уровень, nl: след. уровень, a: точность 0..1, t: мс, ts: время, d: детали }
   let results = BT.ls.get(K.results, []);
   if (!Array.isArray(results)) results = [];
   let pending = new Set(BT.ls.get(K.pending, []));
@@ -27,10 +44,11 @@
     BT.ls.set(K.pending, Array.from(pending));
   };
 
+  // Среднее трёх лучших из последних 10 результатов — устойчиво к случайным неудачам.
+  const top3 = (list) => BT.avg(list.slice(-10).map((r) => r.s).sort((a, b) => b - a).slice(0, 3));
   function gameRating(list, game) {
     if (!list || !list.length) return null;
-    const top = list.slice(-10).map((r) => r.s).sort((a, b) => b - a).slice(0, 3);
-    return Math.round(BT.clamp(BT.avg(top) / game.ref, 0, 1) * 1000);
+    return Math.round(BT.clamp(top3(list) / game.ref, 0, 1) * 100);
   }
 
   function ratings(pid, upTo) {
@@ -40,9 +58,7 @@
       (byGame[r.g] = byGame[r.g] || []).push(r);
     }
     const games = {};
-    BT.games.forEach((g) => {
-      if (byGame[g.id]) games[g.id] = gameRating(byGame[g.id], g);
-    });
+    BT.games.forEach((g) => { if (byGame[g.id]) games[g.id] = gameRating(byGame[g.id], g); });
     const cats = {};
     BT.CATS.forEach((c) => {
       const v = BT.games.filter((g) => g.cat === c.id && games[g.id] != null).map((g) => games[g.id]);
@@ -57,7 +73,14 @@
     profiles: () => profiles,
     profile: (id) => profiles.find((p) => p.id === id),
     me: () => profiles.find((p) => p.id === BT.settings.profile) || null,
-    other: () => profiles.find((p) => p.id !== BT.settings.profile) || null,
+    others: () => profiles.filter((p) => p.id !== BT.settings.profile),
+    addProfile(data) {
+      const p = { id: 'u' + BT.uid(), name: data.name, emoji: data.emoji, color: data.color, updated: Date.now(), dirty: true };
+      profiles.push(p);
+      saveProfiles();
+      BT.emit('profiles');
+      return p;
+    },
     updateProfile(id, patch) {
       const p = this.profile(id);
       if (!p) return;
@@ -76,9 +99,14 @@
     mergeProfiles(remote) {
       let changed = false;
       (remote || []).forEach((r) => {
+        if (!r || !r.id) return;
         const p = this.profile(r.id);
-        if (p && Number(r.updated) > (p.updated || 0) && !p.dirty) {
-          Object.assign(p, { name: r.name, emoji: r.emoji, color: r.color, updated: Number(r.updated) });
+        const upd = Number(r.updated) || 0;
+        if (!p) {
+          profiles.push({ id: r.id, name: r.name, emoji: r.emoji, color: r.color, updated: upd });
+          changed = true;
+        } else if (upd > (p.updated || 0) && !p.dirty) {
+          Object.assign(p, { name: r.name, emoji: r.emoji, color: r.color, updated: upd });
           changed = true;
         }
       });
@@ -162,16 +190,23 @@
     },
     totals(pid) {
       const list = results.filter((r) => r.p === pid);
-      return {
-        games: list.length,
-        time: BT.sum(list.map((r) => r.t || 0)),
-        days: new Set(list.map((r) => BT.fmt.dayKey(r.ts))).size,
-      };
+      return { games: list.length, time: BT.sum(list.map((r) => r.t || 0)), days: new Set(list.map((r) => BT.fmt.dayKey(r.ts))).size };
     },
     ratings,
     gameRatingFor(pid, gid) {
       const g = BT.game(gid);
       return g ? gameRating(results.filter((r) => r.p === pid && r.g === gid), g) : null;
+    },
+    // Всё для объяснения рейтинга игры: среднее, эталон, ранг и сколько очков до следующего.
+    gameInfo(pid, gid) {
+      const g = BT.game(gid);
+      const list = results.filter((r) => r.p === pid && r.g === gid);
+      if (!g || !list.length) return null;
+      const avg = Math.round(top3(list));
+      const rating = gameRating(list, g);
+      const rank = BT.rank(rating);
+      const need = rank.next ? Math.max(1, Math.ceil((rank.next.min / 100) * g.ref - avg)) : 0;
+      return { avg, rating, rank, need, ref: g.ref, games: list.length };
     },
     // Общий индекс на конец каждого дня за последние N дней (для графика).
     history(pid, days) {
@@ -190,7 +225,7 @@
       return out;
     },
 
-    // --- какие вопросы уже показывались (чтобы не повторяться) ---
+    // --- какие задания уже показывались (чтобы не повторяться) ---
     seen(pid, key) {
       return new Set(BT.ls.get('bt_seen_' + pid + '_' + key, []));
     },

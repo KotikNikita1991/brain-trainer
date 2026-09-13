@@ -262,6 +262,7 @@
     { id: 'attention', name: 'Внимание', color: 'var(--c-attention)' },
     { id: 'logic', name: 'Логика и счёт', color: 'var(--c-logic)' },
     { id: 'words', name: 'Эрудиция и слова', color: 'var(--c-words)' },
+    { id: 'puzzles', name: 'Головоломки', color: 'var(--c-puzzles)' },
   ];
   BT.cat = (id) => BT.CATS.find((c) => c.id === id);
   BT.games = [];

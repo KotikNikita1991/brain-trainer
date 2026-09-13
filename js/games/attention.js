@@ -13,7 +13,7 @@
       'Нажимайте их по порядку — 1, 2, 3… — как можно быстрее.',
       'Ошибка добавляет 2 секунды. Совет: смотрите в центр и ищите боковым зрением.',
     ],
-    ref: 1200, startLevel: 1,
+    ref: 1000, startLevel: 1, maxLevel: 5,
     run(ctx) {
       const h = ctx.h;
       const lvl = BT.clamp(ctx.level, 1, 5), cfg = SCH[lvl], n = cfg.n, total = n * n;
@@ -86,7 +86,7 @@
       'Обычно нужно выбрать ЦВЕТ БУКВ. На высоких уровнях иногда просят выбрать САМО СЛОВО — следите за подсказкой.',
       '45 секунд. Серия верных ответов даёт бонус.',
     ],
-    ref: 900, startLevel: 1,
+    ref: 1000, startLevel: 1, maxLevel: 5,
     run(ctx) {
       const h = ctx.h;
       const lvl = BT.clamp(ctx.level, 1, 5);
@@ -165,7 +165,7 @@
       'Найдите её. С каждым шагом клеток больше, а разница тоньше.',
       '45 секунд. Ошибка отнимает 3 секунды.',
     ],
-    ref: 1000, levels: false,
+    ref: 800, levels: false,
     run(ctx) {
       const h = ctx.h;
       let step = 0, score = 0, right = 0, wrong = 0, oddEl = null;
@@ -177,10 +177,12 @@
 
       function nextStep() {
         step++;
-        const n = Math.min(8, 2 + Math.floor(step / 2));
-        const delta = Math.max(3.5, 22 * Math.pow(0.915, step - 1));
-        const hue = BT.rand.int(0, 359), sat = BT.rand.int(55, 80), light = BT.rand.int(42, 62);
-        const oddLight = light + (light > 52 ? -delta : delta);
+        // OKLCH — перцептивно равномерная яркость: разница одинаково заметна для любого цвета.
+        // Разница не меньше 5% — её видно на любом экране; дальше сложность растёт за счёт размера поля.
+        const n = Math.min(7, 2 + Math.floor(step / 2));
+        const delta = Math.max(0.05, 0.2 * Math.pow(0.9, step - 1));
+        const hue = BT.rand.int(0, 359), chroma = 0.1 + Math.random() * 0.06, light = 0.6 + Math.random() * 0.14;
+        const oddLight = light + (light > 0.67 ? -delta : delta);
         const odd = BT.rand.int(0, n * n - 1);
         board.style.gridTemplateColumns = 'repeat(' + n + ', 1fr)';
         board.style.gap = n >= 7 ? '4px' : n >= 5 ? '6px' : '8px';
@@ -188,7 +190,7 @@
         for (let i = 0; i < n * n; i++) {
           const c = h('div', {
             class: 'cell',
-            style: { background: 'hsl(' + hue + ', ' + sat + '%, ' + (i === odd ? oddLight : light) + '%)', borderRadius: n >= 7 ? '8px' : '12px' },
+            style: { background: 'oklch(' + (i === odd ? oddLight : light).toFixed(3) + ' ' + chroma.toFixed(3) + ' ' + hue + ')', borderRadius: n >= 7 ? '8px' : '12px' },
           });
           ctx.tap(c, () => pick(i === odd, c));
           board.append(c);
@@ -233,7 +235,7 @@
       'Нажали раньше — фальстарт, попытка повторится.',
       '5 попыток, считается среднее время.',
     ],
-    ref: 1000, levels: false,
+    ref: 800, levels: false,
     run(ctx) {
       const h = ctx.h;
       const TRIES = 5;

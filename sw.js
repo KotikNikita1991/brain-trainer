@@ -1,10 +1,13 @@
 // Service Worker: сначала сеть (свежая версия после каждого пуша), без сети — кэш.
-const CACHE = 'neuron-v1';
+const CACHE = 'neuron-v2';
 const SHELL = [
   './',
   './index.html',
   './manifest.json',
   './css/app.css',
+  './css/ui2.css',
+  './css/games2.css',
+  './css/puzzles.css',
   './js/config.js',
   './js/core.js',
   './js/store.js',
@@ -13,11 +16,18 @@ const SHELL = [
   './js/data/sets2.js',
   './js/data/quiz.js',
   './js/data/quiz2.js',
+  './js/data/quiz3.js',
   './js/data/words.js',
+  './js/data/dict.js',
+  './js/data/clues.js',
   './js/games/memory.js',
+  './js/games/memory2.js',
   './js/games/attention.js',
   './js/games/logic.js',
   './js/games/words.js',
+  './js/games/erudition.js',
+  './js/games/sudoku.js',
+  './js/games/cross.js',
   './js/ui.js',
   './js/app.js',
   './icons/icon-180.png',

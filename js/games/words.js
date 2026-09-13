@@ -7,14 +7,28 @@
 
   const TOPICS = [
     { id: 'all', name: 'Все темы' },
-    { id: 'history', name: 'История' },
+    { id: 'general', name: 'Общие знания' },
+    { id: 'nature', name: 'Природа' },
+    { id: 'sport', name: 'Спорт' },
     { id: 'geo', name: 'География' },
+    { id: 'science', name: 'Наука' },
+    { id: 'history', name: 'История' },
     { id: 'lit', name: 'Литература' },
     { id: 'art', name: 'Искусство' },
-    { id: 'science', name: 'Наука' },
     { id: 'lang', name: 'Язык' },
-    { id: 'misc', name: 'Разное' },
+    { id: 'dates', name: 'Даты' },
   ];
+  // Вес тем в режиме «Все темы»: упор на общие знания, даты — изредка.
+  const MIX = { general: 3, nature: 2, sport: 2, geo: 2, science: 2, history: 1.5, lit: 1.5, art: 1.5, lang: 1.5, dates: 0.4 };
+  function weightedTopic(topics) {
+    const total = topics.reduce((s, t) => s + (MIX[t] || 1), 0);
+    let x = Math.random() * total;
+    for (const t of topics) {
+      x -= MIX[t] || 1;
+      if (x <= 0) return t;
+    }
+    return topics[topics.length - 1];
+  }
   const topicName = (id) => (TOPICS.find((t) => t.id === id) || TOPICS[0]).name;
 
   // n различных значений из колонки ai (кроме правильного); filter — предпочтительный круг (например, тот же континент).
@@ -53,7 +67,7 @@
   }
   function buildBank() {
     bank = [];
-    (D.quiz || []).forEach((x, i) => bank.push({ id: 'q:' + i, topic: x[0], q: x[1], a: x[2], wrong: () => x.slice(3, 6) }));
+    (D.quiz || []).forEach((x, i) => bank.push({ id: 'q:' + i, topic: x[0] === 'misc' ? 'general' : x[0], q: x[1], a: x[2], wrong: () => x.slice(3, 6) }));
     const S = D.sets || {};
     if (S.countries) {
       fromTable('cap', 'geo', S.countries, (r) => 'Столица страны ' + r[0] + '?', 1, 3);
@@ -69,8 +83,8 @@
     if (S.inventions) fromTable('inv', 'science', S.inventions, (r) => 'Кто ' + r[0] + '?', 1);
     if (S.vocab) fromTable('voc', 'lang', S.vocab, (r) => 'Что означает слово «' + r[0] + '»?', 1);
     if (S.idioms) fromTable('idi', 'lang', S.idioms, (r) => 'Что значит выражение «' + r[0] + '»?', 1);
-    if (S.myth) fromTable('myth', 'misc', S.myth, (r) => r[0] + ' — кто это?', 1);
-    if (S.dates) S.dates.forEach((r, i) => bank.push({ id: 'date:' + i, topic: 'history', q: 'В каком году ' + r[0] + '?', a: String(r[1]), wrong: () => yearsNear(r[1]) }));
+    if (S.myth) fromTable('myth', 'lit', S.myth, (r) => r[0] + ' — кто это?', 1);
+    if (S.dates) S.dates.forEach((r, i) => bank.push({ id: 'date:' + i, topic: 'dates', q: 'В каком году ' + r[0] + '?', a: String(r[1]), wrong: () => yearsNear(r[1]) }));
   }
   BT.quizBankSize = () => {
     if (!bank) buildBank();
@@ -91,7 +105,7 @@
     });
     const out = [];
     for (let guard = 0; out.length < n && guard < 500; guard++) {
-      const q = byTopic[pick(topics)].pop();
+      const q = byTopic[topic === 'all' ? weightedTopic(topics) : topics[0]].pop();
       if (q) out.push(q);
     }
     return out;
@@ -120,7 +134,8 @@
   // ---------- Общий «блиц»: вопрос + варианты, таймер, штраф за ошибку ----------
   function runBlitz(ctx, o) {
     const h = ctx.h;
-    let score = 0, streak = 0, best = 0, right = 0, wrong = 0, locked = false;
+    let score = 0, streak = 0, best = 0, right = 0, wrong = 0, locked = false, cur = null;
+    const review = [];
     const top = h('div', { class: 'stage-msg strong', text: o.title || '' });
     const qBox = h('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center' } });
     const list = h('div', { class: o.listClass });
@@ -130,7 +145,7 @@
     const timer = ctx.timer(o.seconds, finish);
 
     function next() {
-      const item = o.next();
+      const item = (cur = o.next());
       if (!item) return finish();
       qBox.innerHTML = '';
       if (item.q) qBox.append(item.q);
@@ -146,6 +161,7 @@
     function choose(b) {
       if (locked) return;
       locked = true;
+      review.push({ q: cur.qText || '', your: b.textContent, right: cur.rightText || '', ok: !!b._ok });
       if (b._ok) {
         right++;
         streak++;
@@ -172,6 +188,7 @@
       ctx.end({
         score, accuracy: right / Math.max(1, right + wrong),
         stats: [['Верно', right], ['Ошибки', wrong], ['Лучшая серия', best]],
+        review: review.slice(-40),
         details: { right, wrong, best },
       });
     }
@@ -187,7 +204,7 @@
       'Быстрый верный ответ приносит больше очков.',
       'Сначала выпадают вопросы, которых вы ещё не видели. Можно выбрать тему.',
     ],
-    ref: 850, levels: false,
+    ref: 800, levels: false,
     options: [{ key: 'topic', label: 'Тема', def: 'all', values: TOPICS }],
     run(ctx) {
       const h = ctx.h;
@@ -195,6 +212,7 @@
       const qs = pickQuestions(ctx.me.id, topic, 10);
       const N = qs.length, PER = 15;
       let i = -1, score = 0, right = 0, locked = false, timer = null, spent = 0;
+      const review = [];
       const chip = h('div', { class: 'quiz-topic' });
       const qEl = h('div', { class: 'quiz-q' });
       const list = h('div', { class: 'opts' });
@@ -229,6 +247,7 @@
         const left = timer.left();
         timer.stop();
         spent += PER * 1000 - left;
+        review.push({ q: qs[i].q, your: b.textContent, right: qs[i].a, ok: !!b._ok });
         if (b._ok) {
           right++;
           const pts = 60 + Math.round((40 * left) / (PER * 1000));
@@ -248,6 +267,7 @@
         if (locked) return;
         locked = true;
         spent += PER * 1000;
+        review.push({ q: qs[i].q, your: 'время вышло', right: qs[i].a, ok: false });
         ctx.bad();
         reveal(null);
         ctx.clock.after(1800, next);
@@ -257,7 +277,7 @@
         ctx.end({
           score, accuracy: N ? right / N : 0,
           stats: [['Верно', right + ' из ' + N], ['Тема', topicName(topic)], ['Ср. время', (spent / Math.max(1, N) / 1000).toFixed(1).replace('.', ',') + ' с']],
-          details: { right, topic },
+          review, details: { right, topic },
         });
       }
       next();
@@ -273,7 +293,7 @@
       'Варианты — соседи по континенту, так что будьте внимательны.',
       '60 секунд. Ошибка отнимает 3 секунды, серия верных даёт бонус.',
     ],
-    ref: 700, levels: false,
+    ref: 750, levels: false,
     options: [{
       key: 'mode', label: 'Режим', def: 'mix',
       values: [{ id: 'mix', name: 'Всё вперемешку' }, { id: 'flag', name: 'Только флаги' }, { id: 'cap', name: 'Только столицы' }],
@@ -304,7 +324,8 @@
             ai = 0;
           }
           const wrong = distinct(C, i, ai, 3, (x) => x[3] === row[3]);
-          return { q, options: shuffle([{ html: BT.esc(row[ai]), ok: true }].concat(wrong.map((w) => ({ html: BT.esc(w), ok: false })))) };
+          const qText = type === 'flag' ? 'Чей это флаг? ' + row[2] : type === 'cap' ? 'Столица страны ' + row[0] + '?' : row[1] + ' — столица какой страны?';
+          return { q, qText, rightText: row[ai], options: shuffle([{ html: BT.esc(row[ai]), ok: true }].concat(wrong.map((w) => ({ html: BT.esc(w), ok: false })))) };
         },
       });
     },
@@ -320,7 +341,7 @@
       'Нажимайте буквы по порядку. Нажмите на поставленную букву, чтобы вернуть её.',
       '90 секунд. Засчитывается любое настоящее слово из этих букв. Чем длиннее слово, тем больше очков.',
     ],
-    ref: 900, startLevel: 1,
+    ref: 600, startLevel: 1, maxLevel: 5,
     run(ctx) {
       const h = ctx.h;
       const lvl = BT.clamp(ctx.level, 1, 5);
@@ -432,7 +453,7 @@
       'Слова — из тех, где ошибаются чаще всего.',
       '60 секунд. Ошибка отнимает 3 секунды, серия верных даёт бонус.',
     ],
-    ref: 650, levels: false,
+    ref: 750, levels: false,
     run(ctx) {
       const list = (D.words && D.words.spelling) || [];
       const fp = freshPicker(ctx.me.id, 'spell', list, (x) => x[0]);
@@ -441,7 +462,7 @@
         next() {
           const x = fp.next();
           if (!x) return null;
-          return { options: shuffle([{ html: BT.esc(x[0]), ok: true }, { html: BT.esc(x[1]), ok: false }]) };
+          return { qText: x[0] + ' / ' + x[1], rightText: x[0], options: shuffle([{ html: BT.esc(x[0]), ok: true }, { html: BT.esc(x[1]), ok: false }]) };
         },
         onEnd: () => fp.save(),
       });
@@ -468,7 +489,7 @@
       'Выберите правильный. Слова — из орфоэпического словаря ЕГЭ и частых ошибок.',
       '60 секунд. Ошибка отнимает 3 секунды, серия верных даёт бонус.',
     ],
-    ref: 650, levels: false,
+    ref: 750, levels: false,
     run(ctx) {
       const list = (D.words && D.words.stress) || [];
       const fp = freshPicker(ctx.me.id, 'stress', list, (x) => x);
@@ -479,7 +500,7 @@
             const x = fp.next();
             if (!x) return null;
             const v = stressVariant(x);
-            if (v) return { options: shuffle([{ html: stressHtml(x), ok: true }, { html: stressHtml(v), ok: false }]) };
+            if (v) return { qText: 'Ударение: ' + x.toLowerCase(), rightText: x, options: shuffle([{ html: stressHtml(x), ok: true }, { html: stressHtml(v), ok: false }]) };
           }
           return null;
         },

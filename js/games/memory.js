@@ -17,7 +17,7 @@
       'Клетки гаснут: нажмите все, что светились, в любом порядке.',
       'Без ошибок — клеток становится больше. 3 ошибки или 12 раундов — конец.',
     ],
-    ref: 1300, startLevel: 3,
+    ref: 800, startLevel: 3, minLevel: 3, maxLevel: 16,
     run(ctx) {
       const h = ctx.h;
       const ROUNDS = 12, LIVES = 3;
@@ -117,7 +117,7 @@
       'Повторите последовательность теми же нажатиями.',
       'Каждый успех добавляет одну вспышку. 3 ошибки или 12 раундов — конец.',
     ],
-    ref: 1300, startLevel: 3,
+    ref: 750, startLevel: 3, minLevel: 3, maxLevel: 14,
     run(ctx) {
       const h = ctx.h;
       const ROUNDS = 12, LIVES = 3;
@@ -227,7 +227,7 @@
       'Одинаковые остаются открытыми, разные закрываются.',
       'Чем меньше лишних ходов и быстрее — тем больше очков и выше уровень.',
     ],
-    ref: 1100, startLevel: 1,
+    ref: 1000, startLevel: 1, maxLevel: 6,
     run(ctx) {
       const h = ctx.h;
       const lvl = BT.clamp(ctx.level, 1, 6);
