@@ -373,6 +373,7 @@
       const h = ctx.h;
       const lvl = BT.clamp(ctx.level, 1, 3);
       const P = makePuzzle(WC_LEN[lvl]);
+      BT.lex.load();
       const words = P.L.placed;
       const targets = new Map(words.map((p, i) => [p.w, i]));
       const size = cellSize(P.L, Math.min(window.innerWidth - 32, 420), window.innerHeight * 0.34);
@@ -380,6 +381,13 @@
       const wordEl = h('div', { class: 'wc-word', text: ' ' });
       const wheel = h('div', { class: 'wc-wheel' });
       const bonusEl = h('div', { class: 'wc-bonus' });
+      const addChip = h('button', { type: 'button', class: 'add-word hidden' });
+      let addWord = '';
+      function showAdd(w) {
+        addWord = w;
+        addChip.textContent = '+ «' + w.toLowerCase() + '» — есть такое слово? Засчитать';
+        addChip.classList.remove('hidden');
+      }
       ctx.stage.append(wrap);
       const map = buildGrid(P.L, wrap, h, size);
       let letters = shuffle(Array.from(P.base));
@@ -389,7 +397,17 @@
       const clearBtn = h('button', { type: 'button', class: 'btn secondary', text: 'Стереть' });
       const hintBtn = h('button', { type: 'button', class: 'btn secondary', html: BT.icon('hint') });
       const okBtn = h('button', { type: 'button', class: 'btn', text: 'Проверить' });
-      ctx.stage.append(wordEl, wheel, h('div', { class: 'wc-bar' }, shuffleBtn, clearBtn, hintBtn), h('div', { class: 'wc-bar', style: { marginTop: '10px' } }, okBtn), bonusEl);
+      ctx.stage.append(wordEl, wheel, h('div', { class: 'wc-bar' }, shuffleBtn, clearBtn, hintBtn), h('div', { class: 'wc-bar', style: { marginTop: '10px' } }, okBtn), bonusEl, addChip);
+      ctx.tap(addChip, () => {
+        if (!addWord) return;
+        BT.lex.addPersonal(ctx.me.id, addWord);
+        bonus.add(addWord);
+        score += 5;
+        addChip.classList.add('hidden');
+        addWord = '';
+        BT.toast('Добавлено в ваш словарь');
+        drawGrid();
+      });
       ctx.tap(shuffleBtn, () => { letters = shuffle(letters); picked = []; drawWheel(); });
       ctx.tap(clearBtn, () => { picked = []; drawWheel(); });
       ctx.tap(hintBtn, doHint);
@@ -434,6 +452,7 @@
       function submit() {
         const w = picked.map((i) => letters[i]).join('');
         if (w.length < 3) return;
+        addChip.classList.add('hidden');
         if (targets.has(w) && !found.has(targets.get(w))) {
           const i = targets.get(w);
           found.add(i);
@@ -446,7 +465,7 @@
           if (found.size === words.length) win();
         } else if (found.has(targets.get(w)) || bonus.has(w)) {
           flashWord('dup');
-        } else if (P.all.has(w)) {
+        } else if (P.all.has(w) || BT.lex.has(w, ctx.me.id)) {
           bonus.add(w);
           score += 5;
           ctx.good(wordEl, '+5');
@@ -456,6 +475,7 @@
         } else {
           ctx.bad();
           flashWord('bad');
+          showAdd(w);
         }
       }
       function doHint() {

@@ -786,6 +786,13 @@
         h('div', { class: 'val', text: BT.settings.apiUrl ? 'свой' : CFG.API_URL ? 'из config.js' : 'нет' }), BT.chev())),
       h('div', { class: 'list-footer', text: 'Результаты сначала сохраняются на телефоне — играть можно без интернета. Когда появится сеть, они отправятся в таблицу, и остальные игроки увидят ваш прогресс.' }));
 
+    page.append(h('div', { class: 'list-header', text: 'Словарь' }), h('div', { class: 'list' },
+      h('button', { class: 'row has-icon', type: 'button', onclick: myWordsSheet },
+        BT.rowIcon('wordlist', 'var(--c-words)'),
+        h('div', { class: 'grow' }, h('div', { text: 'Мой словарь' }), h('div', { class: 'sub', text: 'Слова, которые вы засчитали сами' })),
+        h('div', { class: 'val', text: BT.lex.personal(me.id).length }), BT.chev())),
+      h('div', { class: 'list-footer', text: 'В анаграммах и «Словах из букв» засчитывается любое существительное из большого словаря (около 50 тысяч слов). Если настоящего слова там нет — нажмите «Засчитать», и оно попадёт сюда.' }));
+
     page.append(h('div', { class: 'list-header', text: 'О приложении' }), h('div', { class: 'list' },
       h('button', { class: 'row has-icon', type: 'button', onclick: explainSheet },
         BT.rowIcon('info', 'var(--accent)'), h('div', { class: 'grow', text: 'Как считается индекс' }), BT.chev()),
@@ -808,6 +815,22 @@
         render();
         BT.sync.run();
       })));
+  }
+
+  function myWordsSheet() {
+    const me = BT.store.me();
+    const box = h('div');
+    const draw = () => {
+      const list = BT.lex.personal(me.id);
+      box.innerHTML = '';
+      if (!list.length) box.append(h('p', { class: 'sheet-sub', text: 'Пока пусто. Когда игра не узнает настоящее слово, нажмите «Засчитать» — и оно появится здесь.' }));
+      else box.append(h('div', { class: 'chips' }, list.map((w) => h('button', { type: 'button', class: 'word-del', text: w + '  ×', onclick: () => { BT.lex.removePersonal(me.id, w); draw(); } }))));
+    };
+    draw();
+    BT.sheet(h('div', null,
+      h('h2', { class: 'sheet-title', text: 'Мой словарь' }),
+      h('p', { class: 'sheet-sub', text: 'Эти слова засчитываются только вам. Нажмите на слово, чтобы удалить его.' }),
+      box), { onClose: () => render() });
   }
 
   function serverSheet() {

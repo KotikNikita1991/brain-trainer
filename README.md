@@ -61,6 +61,7 @@ tools/                            иконки и локальный серве�
 
 - Вопросы: [js/data/quiz.js](js/data/quiz.js), [quiz2.js](js/data/quiz2.js), [quiz3.js](js/data/quiz3.js) — `[тема, вопрос, правильный, неверный, неверный, неверный]`.
 - Справочники (страны, книги, картины, даты…): [js/data/sets.js](js/data/sets.js), [sets2.js](js/data/sets2.js) — вопросы и определения кроссворда генерируются автоматически. Новые строки добавляйте **в конец** массивов.
+- Большой словарь существительных для проверки слов: [js/data/nouns-full.txt](js/data/nouns-full.txt) — из [Harrix/Russian-Nouns](https://github.com/Harrix/Russian-Nouns) (MIT, © 2018-present Sergienko Anton, см. [licenses/Russian-Nouns-LICENSE.md](licenses/Russian-Nouns-LICENSE.md)). Слова, которых нет в словаре, игрок может засчитать сам — они попадают в «Мой словарь».
 - Определения кроссворда: [js/data/clues.js](js/data/clues.js); словарь: [js/data/dict.js](js/data/dict.js).
 
 ## Локальный запуск

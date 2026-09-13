@@ -347,6 +347,7 @@
       const lvl = BT.clamp(ctx.level, 1, 5);
       const all = (D.words && D.words.nouns) || [];
       const dict = new Set(all);
+      BT.lex.load();
       const [lo, hi] = ANA_LEN[lvl];
       const fp = freshPicker(ctx.me.id, 'anagram', all.filter((w) => w.length >= lo && w.length <= hi), (w) => w);
       let score = 0, right = 0, skipped = 0, word = '', tiles = [], placed = [], locked = true;
@@ -355,7 +356,22 @@
       const letters = h('div', { class: 'letters' });
       const clearBtn = h('button', { type: 'button', class: 'btn secondary', text: 'Стереть' });
       const skipBtn = h('button', { type: 'button', class: 'btn secondary', text: 'Пропустить' });
-      ctx.stage.append(msg, slots, letters, h('div', { class: 'row-btns' }, clearBtn, skipBtn));
+      // Если игра не узнала настоящее слово — его можно засчитать и добавить в личный словарь.
+      const addChip = h('button', { type: 'button', class: 'add-word hidden' });
+      let addWord = '', resetJob = 0;
+      ctx.tap(addChip, () => {
+        if (!addWord) return;
+        ctx.clock.cancel(resetJob);
+        BT.lex.addPersonal(ctx.me.id, addWord);
+        BT.toast('Добавлено в ваш словарь');
+        addChip.classList.add('hidden');
+        slots.innerHTML = '';
+        Array.from(addWord).forEach((ch) => slots.append(h('div', { class: 'slot full', text: ch })));
+        const w = addWord;
+        addWord = '';
+        accept(w);
+      });
+      ctx.stage.append(msg, slots, letters, h('div', { class: 'row-btns' }, clearBtn, skipBtn), addChip);
       ctx.hud({ score: 0 });
       ctx.tap(clearBtn, () => { if (!locked) { placed = []; draw(); } });
       ctx.tap(skipBtn, skip);
@@ -374,6 +390,8 @@
           ctx.tap(b, () => put(i));
           letters.append(b);
         });
+        addChip.classList.add('hidden');
+        addWord = '';
         msg.textContent = 'Соберите слово · ' + word.length + ' ' + BT.fmt.plural(word.length, 'буква', 'буквы', 'букв');
         locked = false;
         draw();
@@ -403,23 +421,27 @@
         BT.haptic();
         draw();
       }
+      function accept(w) {
+        locked = true;
+        right++;
+        const pts = word.length * 10;
+        score += pts;
+        ctx.hud({ score });
+        slots.classList.add('ok');
+        ctx.good(slots, '+' + pts);
+        if (w !== word) msg.textContent = 'Верно! Загадано было «' + word + '»';
+        ctx.clock.after(w === word ? 650 : 1300, next);
+      }
       function check() {
         const w = placed.map((i) => tiles[i]).join('');
         locked = true;
-        if (w === word || dict.has(w)) {
-          right++;
-          const pts = word.length * 10;
-          score += pts;
-          ctx.hud({ score });
-          slots.classList.add('ok');
-          ctx.good(slots, '+' + pts);
-          if (w !== word) msg.textContent = 'Верно! Загадано было «' + word + '»';
-          ctx.clock.after(w === word ? 650 : 1300, next);
-        } else {
-          slots.classList.add('err');
-          ctx.bad();
-          ctx.clock.after(550, () => { placed = []; locked = false; draw(); });
-        }
+        if (w === word || dict.has(w) || BT.lex.has(w, ctx.me.id)) return accept(w);
+        slots.classList.add('err');
+        ctx.bad();
+        addWord = w;
+        addChip.textContent = '+ «' + w + '» — есть такое слово? Засчитать';
+        addChip.classList.remove('hidden');
+        resetJob = ctx.clock.after(550, () => { placed = []; locked = false; draw(); });
       }
       function skip() {
         if (locked) return;
