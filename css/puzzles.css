@@ -74,3 +74,9 @@
 .wc-bar { display: flex; gap: 10px; width: min(92vw, 420px); }
 .wc-bar .btn { height: 46px; font-size: 15px; }
 .wc-bonus { margin-top: 8px; font-size: 13px; font-weight: 600; color: var(--text2); }
+
+/* Кроссворд: кнопки подсказок */
+.cw-tools { display: flex; gap: 8px; width: min(96vw, 480px); margin-bottom: 10px; }
+.cw-tool { flex: 1; height: 42px; display: flex; align-items: center; justify-content: center; gap: 6px; border-radius: 12px; background: color-mix(in srgb, var(--g) 14%, var(--card)); color: var(--g); font-size: 14px; font-weight: 700; }
+.cw-tool svg { width: 18px; height: 18px; flex: none; }
+.cw-tool:active { transform: scale(.97); }

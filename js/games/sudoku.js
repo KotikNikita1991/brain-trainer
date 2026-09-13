@@ -101,7 +101,7 @@
     name: 'Судоку', short: 'Классика с заметками и подсказками',
     howto: [
       'Заполните поле так, чтобы в каждой строке, столбце и квадрате 3×3 были цифры от 1 до 9.',
-      'Нажмите на клетку или цифру — подсветятся её линии и все такие же цифры. «Заметки» — карандашные пометки, «Кандидаты» — расставить все возможные.',
+      'Нажмите на клетку или цифру — подсветятся её линии и все такие же цифры. «Заметки» — карандашные пометки, «Кандидаты» — показать все возможные цифры (повторное нажатие скрывает).',
       'Есть 3 подсказки и отмена хода. Партия сохраняется — можно выйти и продолжить позже.',
     ],
     ref: 1000, levels: false, noCountdown: true, saves: true, stageClass: 'stage-top',
@@ -141,7 +141,7 @@
       const undoBtn = tool('undo', 'Отменить', doUndo);
       const eraseBtn = tool('eraser', 'Стереть', erase);
       const notesBtn = tool('pencil', 'Заметки', () => { notesMode = !notesMode; BT.haptic(); render(); });
-      const candBtn = tool('sudoku', 'Кандидаты', autoCandidates);
+      const candBtn = tool('sudoku', 'Кандидаты', toggleCandidates);
       const hintBtn = tool('hint', 'Подсказка', hint);
       hintBtn.append(h('i', { class: 'cnt' }));
       const pad = h('div', { class: 'sdk-pad' });
@@ -158,7 +158,7 @@
         if (!done) BT.ls.set(saveKey(pid), Object.assign({}, st, { elapsed: Math.round(elapsed()) }));
       };
       const pushUndo = () => {
-        undo.push({ cur: st.cur.slice(), notes: st.notes.slice() });
+        undo.push({ cur: st.cur.slice(), notes: st.notes.slice(), candOn: !!st.candOn, backup: st.backup ? st.backup.slice() : null });
         if (undo.length > 200) undo.shift();
       };
       const clearPeers = (i, d) => PEERS[i].forEach((j) => { st.notes[j] &= ~(1 << d); });
@@ -205,6 +205,7 @@
           padBtns[d].lastChild.textContent = left > 0 ? left : '';
         }
         notesBtn.classList.toggle('on', notesMode);
+        candBtn.classList.toggle('on', !!st.candOn);
         hintBtn.querySelector('.cnt').textContent = HINTS - st.hints;
         const filled = st.cur.filter((v, i) => v && v === st.solution[i]).length;
         ctx.hud({ score: filled, label: '/ 81', progress: filled / 81 });
@@ -261,20 +262,35 @@
         const u = undo.pop();
         st.cur = u.cur;
         st.notes = u.notes;
+        st.candOn = u.candOn;
+        st.backup = u.backup;
         BT.haptic();
         save();
         render();
       }
-      function autoCandidates() {
+      // Все цифры, которые ещё можно поставить в клетку
+      function candMask(i) {
+        let m = 0x3fe;
+        PEERS[i].forEach((j) => { if (st.cur[j]) m &= ~(1 << st.cur[j]); });
+        return m;
+      }
+      // «Кандидаты»: первое нажатие показывает все возможные цифры, второе — скрывает
+      // и возвращает ваши собственные заметки (без уже невозможных цифр).
+      function toggleCandidates() {
         if (done) return;
         pushUndo();
-        for (let i = 0; i < 81; i++) {
-          if (st.cur[i]) continue;
-          let m = 0x3fe;
-          PEERS[i].forEach((j) => { if (st.cur[j]) m &= ~(1 << st.cur[j]); });
-          st.notes[i] = m;
+        if (st.candOn) {
+          const back = st.backup || new Array(81).fill(0);
+          st.notes = back.map((m, i) => (st.cur[i] ? 0 : m & candMask(i)));
+          st.backup = null;
+          st.candOn = false;
+          BT.toast('Кандидаты скрыты');
+        } else {
+          st.backup = st.notes.slice();
+          for (let i = 0; i < 81; i++) st.notes[i] = st.cur[i] ? 0 : candMask(i);
+          st.candOn = true;
+          BT.toast('Кандидаты показаны — нажмите ещё раз, чтобы скрыть');
         }
-        BT.toast('Все кандидаты расставлены');
         save();
         render();
       }

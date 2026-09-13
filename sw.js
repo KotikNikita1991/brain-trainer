@@ -1,5 +1,5 @@
 // Service Worker: сначала сеть (свежая версия после каждого пуша), без сети — кэш.
-const CACHE = 'neuron-v3';
+const CACHE = 'neuron-v4';
 const SHELL = [
   './',
   './index.html',

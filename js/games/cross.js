@@ -147,7 +147,7 @@
     howto: [
       'Нажмите на клетку — появится определение слова. Вводите буквы с клавиатуры.',
       'Повторное нажатие на клетку пересечения меняет направление. Стрелки переключают слова.',
-      'Подсказка открывает букву. Буква «Ё» пишется как «Е». Уровень — количество слов.',
+      'Не знаете слово — «Открыть букву» (в выбранной клетке) или «Открыть слово». Подсказки немного уменьшают очки. «Ё» пишется как «Е».',
     ],
     ref: 700, startLevel: 1, maxLevel: 4, noCountdown: true, stageClass: 'stage-top',
     run(ctx) {
@@ -179,14 +179,15 @@
         if (ri === 2) {
           const del = h('button', { type: 'button', class: 'kb-k fn', html: BT.icon('backspace') });
           ctx.tap(del, backspace);
-          const hint = h('button', { type: 'button', class: 'kb-k fn', html: BT.icon('hint') });
-          ctx.tap(hint, doHint);
-          r.prepend(hint);
           r.append(del);
         }
         kb.append(r);
       });
-      ctx.stage.append(kb);
+      const hintL = h('button', { type: 'button', class: 'cw-tool', html: BT.icon('hint') + '<span>Открыть букву</span>' });
+      const hintW = h('button', { type: 'button', class: 'cw-tool', html: BT.icon('crossword') + '<span>Открыть слово</span>' });
+      ctx.tap(hintL, hintLetter);
+      ctx.tap(hintW, hintWord);
+      ctx.stage.append(h('div', { class: 'cw-tools' }, hintL, hintW), kb);
 
       words.forEach((p, i) => cellsOf(p).forEach((k) => {
         const el = map.get(k);
@@ -241,14 +242,30 @@
         BT.haptic();
         draw();
       }
-      function doHint() {
+      function revealCell(k) {
         const cs = cellsOf(words[cur]);
-        const k = cs.find((x) => letters.get(x) !== words[cur].w[cs.indexOf(x)] && !locked.has(x));
-        if (!k) return;
         letters.set(k, words[cur].w[cs.indexOf(k)]);
         locked.add(k);
         revealed.add(k);
         hints++;
+      }
+      // Открыть букву в выбранной клетке (если она уже верна — ближайшую неверную в слове)
+      function hintLetter() {
+        const cs = cellsOf(words[cur]);
+        const need = (x) => !locked.has(x) && letters.get(x) !== words[cur].w[cs.indexOf(x)];
+        const k = need(cs[pos]) ? cs[pos] : cs.find(need);
+        if (!k) return;
+        revealCell(k);
+        pos = Math.min(cs.indexOf(k) + 1, cs.length - 1);
+        ctx.click();
+        afterChange();
+      }
+      // Открыть слово целиком
+      function hintWord() {
+        const cs = cellsOf(words[cur]);
+        const todo = cs.filter((x) => !locked.has(x) && letters.get(x) !== words[cur].w[cs.indexOf(x)]);
+        if (!todo.length) return;
+        todo.forEach(revealCell);
         ctx.click();
         afterChange();
       }
@@ -433,15 +450,21 @@
         wordEl.textContent = picked.map((i) => letters[i]).join('') || ' ';
       }
       function drawGrid() {
+        // Клетка на пересечении видна, если найдено ЛЮБОЕ из проходящих через неё слов.
+        const cells = new Map();
         words.forEach((p, i) => cellsOf(p).forEach((k, j) => {
-          const el = map.get(k);
-          const vis = found.has(i) || shown.has(k);
-          const num = el.querySelector('.cw-n');
-          el.textContent = vis ? p.w[j] : '';
-          if (num) el.prepend(num);
-          el.classList.toggle('ok', found.has(i));
-          el.classList.toggle('rev', shown.has(k) && !found.has(i));
+          const c = cells.get(k) || { ch: p.w[j], found: false };
+          if (found.has(i)) c.found = true;
+          cells.set(k, c);
         }));
+        cells.forEach((c, k) => {
+          const el = map.get(k);
+          const num = el.querySelector('.cw-n');
+          el.textContent = c.found || shown.has(k) ? c.ch : '';
+          if (num) el.prepend(num);
+          el.classList.toggle('ok', c.found);
+          el.classList.toggle('rev', shown.has(k) && !c.found);
+        });
         ctx.hud({ score, label: '', text: found.size + '/' + words.length });
         bonusEl.textContent = bonus.size ? 'Бонусные слова: ' + Array.from(bonus).join(', ').toLowerCase() : 'Найдите ' + words.length + ' ' + BT.fmt.plural(words.length, 'слово', 'слова', 'слов');
       }
@@ -479,8 +502,10 @@
         }
       }
       function doHint() {
+        const solvedCells = new Set();
+        words.forEach((p, i) => { if (found.has(i)) cellsOf(p).forEach((k) => solvedCells.add(k)); });
         const open = [];
-        words.forEach((p, i) => { if (!found.has(i)) cellsOf(p).forEach((k) => { if (!shown.has(k)) open.push(k); }); });
+        words.forEach((p, i) => { if (!found.has(i)) cellsOf(p).forEach((k) => { if (!shown.has(k) && !solvedCells.has(k)) open.push(k); }); });
         if (!open.length) return;
         shown.add(BT.rand.pick(open));
         hints++;
